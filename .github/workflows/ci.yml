@@ -22,13 +22,16 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Setup environment
-      run: |
-        # Create .env file from example if it doesn't exist
-        if [ ! -f .env ]; then
-          cp .env.example .env
-          echo "✅ Created .env from .env.example"
-        fi
+     - name: Setup environment
+       run: |
+         # Create .env file from example if it doesn't exist
+         if [ ! -f .env ]; then
+           cp .env.example .env
+           echo "✅ Created .env from .env.example"
+         fi
+         # Create data and music directories for volumes
+         mkdir -p data music
+         echo "✅ Created data and music directories"
 
     - name: Test Docker Compose configuration
       run: |

@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Test Docker Compose configuration
+      run: |
+        docker-compose config --quiet
+        echo "✅ Docker Compose configuration is valid"
+
+    - name: Pull Navidrome image
+      run: docker-compose pull
+
+    - name: Start services
+      run: docker-compose up -d
+
+    - name: Wait for Navidrome to be ready
+      run: |
+        timeout 60 bash -c 'until curl -f http://localhost:4533/login >/dev/null 2>&1; do sleep 2; done'
+        echo "✅ Navidrome is responding"
+
+    - name: Check container health
+      run: |
+        docker ps --filter "name=navidrome"
+        docker-compose logs navidrome | tail -20
+
+    - name: Run basic tests
+      run: |
+        # Test HTTP endpoint
+        response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:4533/login)
+        if [ "$response" = "302" ]; then
+          echo "✅ Login endpoint responding correctly"
+        else
+          echo "❌ Login endpoint failed with code: $response"
+          exit 1
+        fi
+
+    - name: Stop services
+      run: docker-compose down
+      if: always()
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Check shell scripts
+      run: |
+        find . -name "*.sh" -type f -exec shellcheck {} \;
+      continue-on-error: true
+
+    - name: Validate YAML files
+      run: |
+        find . -name "*.yml" -o -name "*.yaml" | xargs -I {} sh -c 'echo "Validating {}"; python3 -c "import yaml; yaml.safe_load(open(\"{}\"))" || exit 1'
+
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'

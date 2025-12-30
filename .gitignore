@@ -1,0 +1,64 @@
+# Logs
+*.log
+logs/
+vpn-connection.log
+socks-proxy.log
+vpn-monitor.log
+
+# Runtime files
+*.pid
+openvpn.pid
+
+# Data directories (persistent storage)
+data/
+music/
+
+# VPN configuration and certificates
+vpn-config/
+*.ovpn
+
+# Docker
+.dockerignore
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Node modules (if any)
+node_modules/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Build artifacts
+dist/
+build/
+
+# Git
+.git/
+*.patch
+*.diff

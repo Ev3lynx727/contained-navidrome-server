@@ -1,11 +1,27 @@
 services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale-navidrome
+    hostname: navidrome-server
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_EXTRA_ARGS=--advertise-tags=tag:navidrome
+      - TS_STATE_DIR=/var/lib/tailscale
+    volumes:
+      - ./tailscale-state:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - net_admin
+      - net_raw
+    restart: unless-stopped
+
   navidrome:
     image: deluan/navidrome:latest
     container_name: navidrome-server
     user: 1000:1000
     restart: unless-stopped
-    ports:
-      - "4533:4533"
     environment:
       - ND_MUSICFOLDER=/music
       - ND_DATAFOLDER=/data
@@ -15,9 +31,9 @@ services:
     env_file:
       - .env
       - .env.example
-    networks:
-      navidrome-network:
-        ipv4_address: 172.21.0.3
+    network_mode: service:tailscale
+    depends_on:
+      - tailscale
 
 networks:
   navidrome-network:

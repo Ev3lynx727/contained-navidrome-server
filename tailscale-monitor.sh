@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# tailscale-monitor.sh - Monitor Tailscale connection health
+# tailscale-monitor.sh - Monitor Tailscale container connection health
 
 set -e
 
@@ -27,11 +27,30 @@ log_warn() {
     echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
+# Check if services are running
+check_containers() {
+    log_info "Checking container status..."
+
+    if docker compose ps | grep -q "tailscale-navidrome.*Up"; then
+        log_success "Tailscale container is running"
+    else
+        log_error "Tailscale container is not running"
+        return 1
+    fi
+
+    if docker compose ps | grep -q "navidrome-server.*Up"; then
+        log_success "Navidrome container is running"
+    else
+        log_error "Navidrome container is not running"
+        return 1
+    fi
+}
+
 # Check Tailscale status
 check_status() {
     log_info "Checking Tailscale status..."
 
-    if tailscale status | grep -q "Tailscale is up"; then
+    if docker compose exec -T tailscale tailscale status | grep -q "Tailscale is up"; then
         log_success "Tailscale is connected"
         return 0
     else
@@ -40,31 +59,30 @@ check_status() {
     fi
 }
 
-# Check network connectivity
-check_connectivity() {
-    log_info "Checking network connectivity..."
-
-    # Try to ping Tailscale coordination server
-    if timeout 5 tailscale ping controlplane.tailscale.com >/dev/null 2>&1; then
-        log_success "Network connectivity OK"
-        return 0
-    else
-        log_error "Network connectivity issues"
-        return 1
-    fi
-}
-
 # Show current IPs
 show_ips() {
     log_info "Current Tailscale IPs:"
-    tailscale ip -4
-    tailscale ip -6
+    docker compose exec -T tailscale tailscale ip -4
+    docker compose exec -T tailscale tailscale ip -6
 }
 
 # Show peers
 show_peers() {
     log_info "Tailscale peers:"
-    tailscale status | grep -E "^[0-9]"
+    docker compose exec -T tailscale tailscale status | grep -E "^[0-9]"
+}
+
+# Check Navidrome accessibility
+check_navidrome() {
+    log_info "Checking Navidrome accessibility..."
+
+    if curl -f -s http://localhost:4533/login > /dev/null 2>&1; then
+        log_success "Navidrome is accessible"
+        return 0
+    else
+        log_error "Navidrome is not responding"
+        return 1
+    fi
 }
 
 # Continuous monitoring
@@ -75,7 +93,7 @@ monitor() {
         echo ""
         echo "=== $(date) ==="
 
-        if check_status && check_connectivity; then
+        if check_containers && check_status && check_navidrome; then
             show_ips
         fi
 
@@ -86,12 +104,12 @@ monitor() {
 # Main
 main() {
     echo ""
-    log_info "📊 Tailscale Monitor"
-    echo "==================="
+    log_info "📊 Tailscale Container Monitor"
+    echo "=============================="
 
     case "${1:-status}" in
         status)
-            check_status && check_connectivity && show_ips && show_peers
+            check_containers && check_status && check_navidrome && show_ips && show_peers
             ;;
         monitor)
             monitor

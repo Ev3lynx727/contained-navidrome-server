@@ -28,10 +28,10 @@ This project provides a complete Navidrome music server setup with:
 git clone https://github.com/Ev3lynx727/contained-navidrome-server.git
 cd contained-navidrome-server
 
-# Install Tailscale
+# Prepare environment and install dependencies
 ./install-tailscale.sh
 
-# Setup and authenticate Tailscale
+# Configure Tailscale authentication
 ./setup-tailscale.sh
 
 # Start services
@@ -39,20 +39,20 @@ cd contained-navidrome-server
 ```
 
 This will:
-- Install Tailscale on your system
-- Authenticate with your Tailscale network
-- Start Navidrome with secure remote access
+- Prepare Docker environment and create necessary directories
+- Guide you to configure Tailscale authentication
+- Start Tailscale and Navidrome containers with shared networking
 - Provide access information for remote connections
 
 ### Manual Setup
 ```bash
-# Install Tailscale (if not already installed)
+# Prepare environment
 ./install-tailscale.sh
 
-# Setup Tailscale authentication
+# Configure authentication (edit .env with TS_AUTHKEY)
 ./setup-tailscale.sh
 
-# Start Navidrome with Tailscale
+# Start containers
 ./start-tailscale-navidrome.sh
 ```
 
@@ -148,6 +148,8 @@ sudo systemctl enable navidrome-tailscale
 - **Tailscale Access**: `http://<tailscale-ip>:4533` (anywhere on your Tailscale network)
 - **Admin Login**: Username: `admin`, Password: (configured in .env or empty)
 
+**Note**: Port 4533 is exposed through the Tailscale container, so it's accessible via Tailscale IP from any device on your network.
+
 ## CI/CD Pipeline
 
 ### Automated Testing
@@ -180,12 +182,15 @@ sudo systemctl enable navidrome-tailscale
 
 **Tailscale Connection Failed**
 ```bash
-# Check Tailscale status
-tailscale status
+# Check container logs
+docker compose logs tailscale
 
-# Restart Tailscale
-sudo systemctl restart tailscaled
-sudo tailscale up
+# Check Tailscale status in container
+docker compose exec tailscale tailscale status
+
+# Restart containers
+./stop-tailscale-navidrome.sh
+./start-tailscale-navidrome.sh
 ```
 
 **Container Won't Start**
@@ -205,10 +210,13 @@ sudo ./install-tailscale.sh
 
 ### Logs and Monitoring
 ```bash
-# Tailscale logs
-sudo journalctl -u tailscaled -f
+# Container logs
+docker compose logs -f
 
-# Docker container logs
+# Tailscale container logs specifically
+docker compose logs -f tailscale
+
+# Navidrome container logs specifically
 docker compose logs -f navidrome
 
 # Tailscale connection monitoring

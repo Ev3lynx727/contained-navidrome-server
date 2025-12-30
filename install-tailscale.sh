@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# install-tailscale.sh - Install Tailscale on the host system
+# install-tailscale.sh - Prepare environment for Tailscale container
 
 set -e
 
@@ -27,74 +27,61 @@ log_warn() {
     echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
-# Detect OS
-detect_os() {
-    if [[ -f /etc/os-release ]]; then
-        . /etc/os-release
-        OS=$ID
-        VERSION=$VERSION_ID
-    else
-        log_error "Cannot detect OS"
+# Create necessary directories
+create_directories() {
+    log_info "Creating necessary directories..."
+
+    mkdir -p data music tailscale-state
+
+    log_success "Directories created"
+}
+
+# Check Docker and Docker Compose
+check_docker() {
+    log_info "Checking Docker installation..."
+
+    if ! command -v docker &> /dev/null; then
+        log_error "Docker is not installed"
         exit 1
     fi
+
+    if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+        log_error "Docker Compose is not installed"
+        exit 1
+    fi
+
+    log_success "Docker and Docker Compose are available"
 }
 
-# Install Tailscale
-install_tailscale() {
-    log_info "Installing Tailscale..."
+# Setup .env file
+setup_env() {
+    log_info "Setting up environment file..."
 
-    case $OS in
-        ubuntu|debian)
-            # Add Tailscale repository
-            curl -fsSL https://pkgs.tailscale.com/stable/${OS}/${VERSION_ID}.noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
-            curl -fsSL https://pkgs.tailscale.com/stable/${OS}/${VERSION_ID}.tailscale-keyring.list | sudo tee /etc/apt/sources.list.d/tailscale.list
+    if [ ! -f .env ]; then
+        cp .env.example .env
+        log_success "Created .env from .env.example"
+    else
+        log_info ".env already exists"
+    fi
 
-            # Update and install
-            sudo apt-get update
-            sudo apt-get install -y tailscale
-            ;;
-
-        centos|rhel|fedora)
-            # Add Tailscale repository
-            sudo dnf config-manager --add-repo https://pkgs.tailscale.com/stable/${OS}/${VERSION_ID}/tailscale.repo
-            sudo dnf install -y tailscale
-            ;;
-
-        *)
-            log_error "Unsupported OS: $OS"
-            log_info "Please install Tailscale manually from https://tailscale.com/download"
-            exit 1
-            ;;
-    esac
-
-    log_success "Tailscale installed"
-}
-
-# Enable and start service
-enable_service() {
-    log_info "Enabling Tailscale service..."
-
-    sudo systemctl enable tailscaled
-    sudo systemctl start tailscaled
-
-    log_success "Tailscale service enabled and started"
+    log_warn "Please edit .env to add your TS_AUTHKEY for Tailscale authentication"
 }
 
 # Main
 main() {
     echo ""
-    log_info "🔧 Installing Tailscale VPN"
-    echo "============================"
+    log_info "🔧 Preparing environment for Tailscale container"
+    echo "==============================================="
 
-    detect_os
-    log_info "Detected OS: $OS $VERSION"
-
-    install_tailscale
-    enable_service
+    check_docker
+    create_directories
+    setup_env
 
     echo ""
-    log_success "✅ Tailscale installation complete!"
-    log_info "Next: Run ./setup-tailscale.sh to authenticate"
+    log_success "✅ Environment preparation complete!"
+    log_info "Next steps:"
+    log_info "1. Edit .env and set TS_AUTHKEY=<your-auth-key>"
+    log_info "2. Run ./start-tailscale-navidrome.sh to start services"
 }
 
 main "$@"

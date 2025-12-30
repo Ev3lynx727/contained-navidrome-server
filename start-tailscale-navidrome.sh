@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# start-tailscale-navidrome.sh - Start Tailscale and Navidrome together
+# start-tailscale-navidrome.sh - Start Tailscale container and Navidrome
 
 set -e
 
@@ -27,25 +27,44 @@ log_warn() {
     echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
-# Check Tailscale status
-check_tailscale() {
-    log_info "Checking Tailscale status..."
+# Check if auth key is configured
+check_auth() {
+    if [ ! -f .env ] || ! grep -q "^TS_AUTHKEY=" .env; then
+        log_error "Tailscale auth key not configured. Run ./setup-tailscale.sh first"
+        exit 1
+    fi
+}
 
-    if ! tailscale status | grep -q "Tailscale is up"; then
-        log_error "Tailscale is not connected. Run ./setup-tailscale.sh first"
+# Start services
+start_services() {
+    log_info "Starting Tailscale and Navidrome containers..."
+
+    docker compose up -d
+
+    log_success "Services started"
+}
+
+# Verify Tailscale connection
+verify_tailscale() {
+    log_info "Verifying Tailscale connection..."
+
+    # Wait for Tailscale to connect
+    timeout=60
+    while [[ $timeout -gt 0 ]]; do
+        if docker compose exec -T tailscale tailscale status | grep -q "Tailscale is up"; then
+            break
+        fi
+        sleep 5
+        timeout=$((timeout - 5))
+    done
+
+    if [[ $timeout -le 0 ]]; then
+        log_error "Tailscale failed to connect within 60 seconds"
+        log_info "Check container logs: docker compose logs tailscale"
         exit 1
     fi
 
     log_success "Tailscale is connected"
-}
-
-# Start Navidrome
-start_navidrome() {
-    log_info "Starting Navidrome..."
-
-    docker compose up -d navidrome
-
-    log_success "Navidrome started"
 }
 
 # Verify Navidrome is accessible
@@ -64,6 +83,7 @@ verify_navidrome() {
 
     if [[ $timeout -le 0 ]]; then
         log_error "Navidrome failed to start within 60 seconds"
+        log_info "Check container logs: docker compose logs navidrome"
         exit 1
     fi
 
@@ -76,8 +96,7 @@ show_access() {
     log_info "🌐 Access Information"
     echo "===================="
 
-    TAILSCALE_IP=$(tailscale ip -4 2>/dev/null || echo "N/A")
-    HOSTNAME=$(hostname)
+    TAILSCALE_IP=$(docker compose exec -T tailscale tailscale ip -4 2>/dev/null || echo "N/A")
 
     log_info "Local access: http://localhost:4533"
     log_info "Tailscale access: http://${TAILSCALE_IP}:4533"
@@ -91,11 +110,12 @@ show_access() {
 # Main
 main() {
     echo ""
-    log_info "🚀 Starting Tailscale + Navidrome"
-    echo "=================================="
+    log_info "🚀 Starting Tailscale Container + Navidrome"
+    echo "==========================================="
 
-    check_tailscale
-    start_navidrome
+    check_auth
+    start_services
+    verify_tailscale
     verify_navidrome
     show_access
 

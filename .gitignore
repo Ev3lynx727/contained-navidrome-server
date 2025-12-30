@@ -12,6 +12,7 @@ openvpn.pid
 # Data directories (persistent storage)
 data/
 music/
+tailscale-state/
 
 # VPN configuration and certificates
 vpn-config/

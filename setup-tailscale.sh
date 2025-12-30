@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# setup-tailscale.sh - Set up and authenticate Tailscale
+# setup-tailscale.sh - Configure Tailscale authentication key
 
 set -e
 
@@ -27,101 +27,44 @@ log_warn() {
     echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
-# Check if Tailscale is installed
-check_tailscale() {
-    if ! command -v tailscale &> /dev/null; then
-        log_error "Tailscale is not installed. Run ./install-tailscale.sh first"
-        exit 1
-    fi
-
-    if ! systemctl is-active --quiet tailscaled; then
-        log_error "Tailscale daemon is not running"
+# Check if .env exists
+check_env() {
+    if [ ! -f .env ]; then
+        log_error ".env file not found. Run ./install-tailscale.sh first"
         exit 1
     fi
 }
 
-# Authenticate with Tailscale
-authenticate() {
-    log_info "Authenticating with Tailscale..."
+# Setup auth key
+setup_auth() {
+    log_info "Configuring Tailscale authentication..."
 
-    # Check for auth key in environment
-    if [[ -n "$TS_AUTHKEY" ]]; then
-        log_info "Using auth key from environment"
-        sudo tailscale up --auth-key="$TS_AUTHKEY"
+    if grep -q "^TS_AUTHKEY=" .env; then
+        log_info "TS_AUTHKEY is already configured in .env"
     else
-        log_info "No auth key found. Starting interactive authentication..."
-        log_info "Follow the URL that will be displayed to authenticate this device"
-        sudo tailscale up
-    fi
-
-    log_success "Tailscale authenticated"
-}
-
-# Configure hostname and options
-configure() {
-    log_info "Configuring Tailscale..."
-
-    # Set hostname if provided
-    if [[ -n "$TS_HOSTNAME" ]]; then
-        sudo tailscale set --hostname="$TS_HOSTNAME"
-        log_info "Hostname set to: $TS_HOSTNAME"
-    fi
-
-    # Advertise routes if provided
-    if [[ -n "$TS_ROUTES" ]]; then
-        sudo tailscale set --advertise-routes="$TS_ROUTES"
-        log_info "Advertised routes: $TS_ROUTES"
-    fi
-
-    # Accept DNS if requested
-    if [[ "$TS_ACCEPT_DNS" == "true" ]]; then
-        sudo tailscale set --accept-dns=true
-        log_info "DNS configuration accepted"
-    fi
-}
-
-# Verify connection
-verify() {
-    log_info "Verifying Tailscale connection..."
-
-    # Wait for connection
-    timeout=30
-    while [[ $timeout -gt 0 ]]; do
-        if tailscale status | grep -q "Tailscale is up"; then
-            break
-        fi
-        sleep 2
-        timeout=$((timeout - 2))
-    done
-
-    if [[ $timeout -le 0 ]]; then
-        log_error "Tailscale failed to connect within 30 seconds"
+        log_warn "TS_AUTHKEY not found in .env"
+        log_info "Please add your Tailscale auth key to .env:"
+        log_info "TS_AUTHKEY=tskey-auth-..."
+        log_info ""
+        log_info "Get an auth key from: https://login.tailscale.com/admin/settings/keys"
         exit 1
     fi
 
-    # Show status
-    tailscale status
-    tailscale ip -4
-    tailscale ip -6
-
-    log_success "Tailscale is connected"
+    log_success "Auth key configured"
 }
 
 # Main
 main() {
     echo ""
-    log_info "🔐 Setting up Tailscale VPN"
-    echo "==========================="
+    log_info "🔑 Configuring Tailscale Authentication"
+    echo "======================================="
 
-    check_tailscale
-    authenticate
-    configure
-    verify
+    check_env
+    setup_auth
 
     echo ""
-    log_success "✅ Tailscale setup complete!"
-    log_info "Your Navidrome server is now accessible via Tailscale"
-    log_info "Use 'tailscale ip' to get the Tailscale IP address"
+    log_success "✅ Tailscale authentication configured!"
+    log_info "Run ./start-tailscale-navidrome.sh to start the services"
 }
 
 main "$@"

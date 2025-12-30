@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# stop-tailscale-navidrome.sh - Stop Navidrome and optionally Tailscale
+# stop-tailscale-navidrome.sh - Stop Tailscale container and Navidrome
 
 set -e
 
@@ -27,34 +27,22 @@ log_warn() {
     echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
-# Stop Navidrome
-stop_navidrome() {
-    log_info "Stopping Navidrome..."
+# Stop services
+stop_services() {
+    log_info "Stopping Tailscale and Navidrome containers..."
 
-    docker compose down navidrome
+    docker compose down
 
-    log_success "Navidrome stopped"
-}
-
-# Optionally disconnect Tailscale
-disconnect_tailscale() {
-    if [[ "$1" == "--disconnect" ]]; then
-        log_info "Disconnecting Tailscale..."
-        sudo tailscale down
-        log_success "Tailscale disconnected"
-    else
-        log_info "Tailscale remains connected (use --disconnect to disconnect)"
-    fi
+    log_success "Services stopped"
 }
 
 # Main
 main() {
     echo ""
-    log_info "🛑 Stopping Tailscale + Navidrome"
-    echo "==================================="
+    log_info "🛑 Stopping Tailscale Container + Navidrome"
+    echo "==========================================="
 
-    stop_navidrome
-    disconnect_tailscale "$1"
+    stop_services
 
     echo ""
     log_success "✅ Services stopped successfully!"

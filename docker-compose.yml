@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome-server
+    user: 1000:1000
+    restart: unless-stopped
+    ports:
+      - "4533:4533"
+    environment:
+      - ND_MUSICFOLDER=/music
+      - ND_DATAFOLDER=/data
+    volumes:
+      - ./data:/data
+      - ./music:/music
+    env_file:
+      - .env
+    networks:
+      navidrome-network:
+        ipv4_address: 172.21.0.3
+
+networks:
+  navidrome-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16

@@ -24,14 +24,14 @@ jobs:
 
     - name: Test Docker Compose configuration
       run: |
-        docker-compose config --quiet
+        docker compose config --quiet
         echo "✅ Docker Compose configuration is valid"
 
     - name: Pull Navidrome image
-      run: docker-compose pull
+      run: docker compose pull
 
     - name: Start services
-      run: docker-compose up -d
+      run: docker compose up -d
 
     - name: Wait for Navidrome to be ready
       run: |
@@ -41,7 +41,7 @@ jobs:
     - name: Check container health
       run: |
         docker ps --filter "name=navidrome"
-        docker-compose logs navidrome | tail -20
+        docker compose logs navidrome | tail -20
 
     - name: Run basic tests
       run: |
@@ -55,7 +55,7 @@ jobs:
         fi
 
     - name: Stop services
-      run: docker-compose down
+      run: docker compose down
       if: always()
 
   lint:

@@ -30,7 +30,7 @@ log_warn() {
 # Test Docker Compose configuration
 test_docker_compose() {
     log_info "Testing Docker Compose configuration..."
-    if docker-compose config --quiet; then
+    if docker compose config --quiet; then
         log_success "Docker Compose configuration is valid"
     else
         log_error "Docker Compose configuration is invalid"
@@ -43,9 +43,9 @@ test_navidrome() {
     log_info "Testing Navidrome accessibility..."
 
     # Check if container is running
-    if ! docker-compose ps | grep -q "navidrome-server.*Up"; then
+    if ! docker compose ps | grep -q "navidrome-server.*Up"; then
         log_warn "Navidrome container is not running, starting it..."
-        docker-compose up -d navidrome
+        docker compose up -d navidrome
         sleep 10
     fi
 

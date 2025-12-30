@@ -58,22 +58,28 @@ test_navidrome() {
     fi
 }
 
-# Test VPN configuration
-test_vpn_config() {
-    log_info "Testing VPN configuration..."
+# Test Tailscale configuration
+test_tailscale_config() {
+    log_info "Testing Tailscale configuration..."
 
-    if [ -f "vpn-config/vpn.conf" ]; then
-        log_success "VPN config file exists"
+    if command -v tailscale &> /dev/null; then
+        log_success "Tailscale is installed"
 
-        # Check if config is readable
-        if head -1 vpn-config/vpn.conf > /dev/null; then
-            log_success "VPN config is readable"
+        if systemctl is-active --quiet tailscaled; then
+            log_success "Tailscale daemon is running"
+
+            if tailscale status | grep -q "Tailscale is up"; then
+                log_success "Tailscale is connected"
+                tailscale ip -4
+            else
+                log_warn "Tailscale is not connected (expected for CI)"
+            fi
         else
-            log_error "VPN config is not readable"
+            log_error "Tailscale daemon is not running"
             exit 1
         fi
     else
-        log_warn "VPN config file not found (expected for CI)"
+        log_warn "Tailscale is not installed"
     fi
 }
 
@@ -81,12 +87,12 @@ test_vpn_config() {
 test_scripts() {
     log_info "Testing script permissions..."
 
-    local scripts=("run-container.sh" "start-vpn-navidrome.sh" "stop-vpn-navidrome.sh")
+    local scripts=("install-tailscale.sh" "setup-tailscale.sh" "start-tailscale-navidrome.sh" "stop-tailscale-navidrome.sh" "tailscale-monitor.sh")
 
     for script in "${scripts[@]}"; do
         if [ -f "$script" ] && [ -x "$script" ]; then
             log_success "Script $script is executable"
-        elif [ -f "$script" ]; then
+        elif [ -f "$script" ] && [ -x "$script" ]; then
             log_warn "Script $script exists but is not executable"
         else
             log_warn "Script $script not found"
@@ -102,7 +108,7 @@ main() {
 
     test_docker_compose
     test_scripts
-    test_vpn_config
+    test_tailscale_config
     test_navidrome
 
     echo ""

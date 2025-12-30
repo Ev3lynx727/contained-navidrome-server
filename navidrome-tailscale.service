@@ -1,0 +1,17 @@
+[Unit]
+Description=Navidrome Music Server with Tailscale VPN
+After=network.target tailscaled.service
+Requires=tailscaled.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/%u/containerd-navidrome-server
+ExecStartPre=/bin/bash -c 'until tailscale status | grep -q "Tailscale is up"; do sleep 5; done'
+ExecStart=/usr/local/bin/docker-compose up navidrome
+ExecStop=/usr/local/bin/docker-compose down navidrome
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

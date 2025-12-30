@@ -1,24 +1,24 @@
 # Contained Navidrome Server
 
-A self-hosted music server with Docker, VPN integration, and automated CI/CD.
+A self-hosted music server with Docker, Tailscale VPN integration, and automated CI/CD.
 
 ## Overview
 
 This project provides a complete Navidrome music server setup with:
 - Docker containerization
-- Host-based OpenVPN client for secure remote access
-- SOCKS proxy for traffic forwarding
+- Tailscale mesh VPN for secure remote access
+- Zero-config networking with automatic peer discovery
 - Automated CI/CD with GitHub Actions
 - Comprehensive testing and security scanning
 
 ## Features
 
 - 🎵 **Navidrome Music Server**: Stream your personal music collection
-- 🔐 **VPN Integration**: Secure remote access through OpenVPN
+- 🔐 **Tailscale VPN**: Secure remote access through WireGuard-based mesh networking
 - 🚀 **Automated CI/CD**: GitHub Actions with testing and security scanning
 - 🐳 **Docker Ready**: Complete containerization with Compose
-- 📊 **Monitoring**: Health checks and automated VPN reconnection
-- 🔒 **Security**: Trivy vulnerability scanning and security best practices
+- 📊 **Monitoring**: Health checks and Tailscale connection monitoring
+- 🔒 **Security**: Trivy vulnerability scanning and zero-trust networking
 
 ## Quick Start
 
@@ -28,31 +28,39 @@ This project provides a complete Navidrome music server setup with:
 git clone https://github.com/Ev3lynx727/contained-navidrome-server.git
 cd contained-navidrome-server
 
-# Run automated setup
-./auto-setup-vpn.sh
+# Install Tailscale
+./install-tailscale.sh
+
+# Setup and authenticate Tailscale
+./setup-tailscale.sh
+
+# Start services
+./start-tailscale-navidrome.sh
 ```
 
 This will:
-- Install systemd service for auto-startup
-- Set up cron monitoring for VPN health
-- Test VPN connection
-- Configure SOCKS proxy
-- Create desktop shortcuts
+- Install Tailscale on your system
+- Authenticate with your Tailscale network
+- Start Navidrome with secure remote access
+- Provide access information for remote connections
 
 ### Manual Setup
 ```bash
-# Start Navidrome locally
-./run-container.sh
+# Install Tailscale (if not already installed)
+./install-tailscale.sh
 
-# Or start with VPN
-./start-vpn-navidrome.sh
+# Setup Tailscale authentication
+./setup-tailscale.sh
+
+# Start Navidrome with Tailscale
+./start-tailscale-navidrome.sh
 ```
 
 ## Prerequisites
 
 - Docker and Docker Compose
-- Access to VPN infrastructure (existing setup)
-- Linux system (for systemd/cron features)
+- Tailscale account and network access
+- Linux system (for systemd features)
 
 ## Project Structure
 
@@ -67,16 +75,12 @@ contained-navidrome-server/
 ├── README.md            # This file
 ├── data/                # Persistent Navidrome data
 ├── music/               # Music files directory
-├── vpn-config/          # VPN client configuration
-├── auto-setup-vpn.sh    # Automated setup script
-├── start-vpn-navidrome.sh # VPN + Navidrome startup
-├── stop-vpn-navidrome.sh # Clean shutdown
-├── host-ovpn-connect.sh # VPN connection management
-├── setup-socks-proxy.sh # SOCKS proxy setup
-├── vpn-monitor.sh       # VPN health monitoring
-├── setup-cron-monitoring.sh # Cron job setup
-├── install-vpn-service.sh # Systemd service installer
-├── navidrome-vpn.service # Systemd service definition
+├── install-tailscale.sh # Tailscale installation
+├── setup-tailscale.sh   # Tailscale authentication
+├── start-tailscale-navidrome.sh # Start both services
+├── stop-tailscale-navidrome.sh  # Stop services
+├── tailscale-monitor.sh # Connection monitoring
+├── navidrome-tailscale.service # Systemd service definition
 └── test-setup.sh        # Test suite
 ```
 
@@ -92,10 +96,11 @@ ND_DATAFOLDER=/data
 ND_PASSWORD=your_secure_password
 ```
 
-### VPN Configuration
-- VPN config: `vpn-config/vpn.conf`
-- Server: Configured in existing VPN setup
-- Client certificates: Included in config
+### Tailscale Configuration
+- Authentication: Via auth key or interactive login
+- Hostname: Configurable for easy identification
+- Routes: Optional subnet advertising
+- DNS: Optional acceptance of Tailscale DNS
 
 ## Usage
 
@@ -114,32 +119,34 @@ make test
 make logs
 ```
 
-### VPN Management
+### Tailscale Management
 ```bash
-# Check VPN status
-./host-ovpn-connect.sh status
+# Check Tailscale status
+./tailscale-monitor.sh status
 
-# Start VPN monitoring
-./vpn-monitor.sh monitor
+# Start connection monitoring
+./tailscale-monitor.sh monitor
 
-# Check proxy status
-./setup-socks-proxy.sh status
+# Get Tailscale IP
+tailscale ip
 ```
 
 ### System Integration
 ```bash
-# Install systemd service (auto-start VPN)
-sudo ./install-vpn-service.sh
+# Install systemd service (auto-start with Tailscale)
+sudo cp navidrome-tailscale.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable navidrome-tailscale
 
-# Setup cron monitoring
-./setup-cron-monitoring.sh
+# Monitor Tailscale connection
+./tailscale-monitor.sh monitor
 ```
 
 ## Access Points
 
 - **Local Access**: `http://localhost:4533`
-- **VPN Access**: Connect to VPN first, then access `http://localhost:4533`
-- **Admin Login**: Username: `admin`, Password: (configured in .env)
+- **Tailscale Access**: `http://<tailscale-ip>:4533` (anywhere on your Tailscale network)
+- **Admin Login**: Username: `admin`, Password: (configured in .env or empty)
 
 ## CI/CD Pipeline
 
@@ -161,23 +168,24 @@ sudo ./install-vpn-service.sh
 
 ## Security Features
 
-- VPN-only remote access
+- Tailscale mesh VPN for secure remote access
 - Container isolation
 - Automated security scanning
 - No public ports exposed
-- Encrypted traffic end-to-end
+- WireGuard encryption end-to-end
 
 ## Troubleshooting
 
 ### Common Issues
 
-**VPN Connection Failed**
+**Tailscale Connection Failed**
 ```bash
-# Check VPN logs
-./host-ovpn-connect.sh status
+# Check Tailscale status
+tailscale status
 
-# Restart VPN
-./host-ovpn-connect.sh restart
+# Restart Tailscale
+sudo systemctl restart tailscaled
+sudo tailscale up
 ```
 
 **Container Won't Start**
@@ -192,19 +200,19 @@ docker compose config
 **Permission Errors**
 ```bash
 # Run with sudo for system operations
-sudo ./install-vpn-service.sh
+sudo ./install-tailscale.sh
 ```
 
 ### Logs and Monitoring
 ```bash
-# VPN connection logs
-tail -f vpn-connection.log
+# Tailscale logs
+sudo journalctl -u tailscaled -f
 
-# SOCKS proxy logs
-tail -f socks-proxy.log
+# Docker container logs
+docker compose logs -f navidrome
 
-# VPN monitoring logs
-tail -f vpn-monitor.log
+# Tailscale connection monitoring
+./tailscale-monitor.sh monitor
 ```
 
 ## Contributing

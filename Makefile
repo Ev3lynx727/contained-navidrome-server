@@ -1,4 +1,4 @@
-.PHONY: help build up down logs clean test vpn-start vpn-stop
+.PHONY: help build up down logs clean test tailscale-start tailscale-stop
 
 # Default target
 help: ## Show this help message
@@ -23,22 +23,22 @@ logs: ## Show logs from all services
 restart: ## Restart all services
 	docker-compose restart
 
-# VPN commands
-vpn-start: ## Start VPN connection and services
-	./start-vpn-navidrome.sh
+# Tailscale commands
+tailscale-start: ## Start Tailscale and services
+	./start-tailscale-navidrome.sh
 
-vpn-stop: ## Stop VPN and services
-	./stop-vpn-navidrome.sh
+tailscale-stop: ## Stop services (Tailscale remains connected)
+	./stop-tailscale-navidrome.sh
 
-vpn-status: ## Check VPN status
-	./host-ovpn-connect.sh status
+tailscale-status: ## Check Tailscale status
+	./tailscale-monitor.sh status
 
 # Testing
 test: ## Run basic tests
 	./test-setup.sh
 
-test-vpn: ## Test VPN configuration
-	./host-ovpn-connect.sh connect
+test-tailscale: ## Test Tailscale configuration
+	./tailscale-monitor.sh status
 
 # Cleanup
 clean: ## Remove containers, networks, and volumes
@@ -56,21 +56,21 @@ logs-navidrome: ## Show Navidrome logs
 
 # Setup
 setup: ## Run initial setup
-	./auto-setup-vpn.sh
+	./install-tailscale.sh && ./setup-tailscale.sh
 
 setup-systemd: ## Install systemd service
-	sudo ./install-vpn-service.sh
+	sudo cp navidrome-tailscale.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable navidrome-tailscale
 
-setup-cron: ## Install cron monitoring
-	./setup-cron-monitoring.sh
+setup-monitor: ## Setup connection monitoring
+	./tailscale-monitor.sh monitor
 
 # Status
 status: ## Show status of all components
 	@echo "=== Docker Services ==="
 	@docker-compose ps
 	@echo ""
-	@echo "=== VPN Status ==="
-	@./host-ovpn-connect.sh status 2>/dev/null || echo "VPN scripts not available"
+	@echo "=== Tailscale Status ==="
+	@tailscale status 2>/dev/null || echo "Tailscale not available"
 	@echo ""
 	@echo "=== System Resources ==="
 	@docker system df

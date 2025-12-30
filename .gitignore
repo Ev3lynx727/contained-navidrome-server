@@ -24,6 +24,7 @@ vpn-config/
 .env
 .env.local
 .env.*.local
+!.env.example
 
 # IDE and editor files
 .vscode/
